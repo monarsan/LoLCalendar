@@ -100,25 +100,51 @@ def get_last_record_time():
     return datetime.datetime.fromisoformat(event['items'][-1]['end']['dateTime'])
 
 
+def get_start_time_from_matches(matches):
+    start_time = []
+    for match in matches:
+        start_time.append(get_match_start_time(match))
+    return start_time
+
+
+def get_end_time_from_matches(matches):
+    end_time = []
+    for match in matches:
+        end_time.append(get_match_end_time(match))
+    return end_time
+
+
+def concat_match_times(start_list, end_list):
+    start_concat = [start_list[0]]
+    end_concat = []
+    for i in range(len(start_list)-1):
+        if start_list[i+1] - end_list[i] < datetime.timedelta(minutes=15):
+            continue
+        else:
+            start_concat.append(start_list[i+1])
+            end_concat.append(end_list[i])
+    end_concat.append(end_list[-1])
+    return start_concat, end_concat
+
 def get_match_list_not_recorded(tokyo_time):
     puuid = get_puuid(summoner_name)
     unix_time = int(tokyo_time.timestamp()) + 100 
     matches = get_match_list(puuid, unix_time)
     credentials = service_account.Credentials.from_service_account_file(SERVICE_ACCOUNT_FILE, scopes=SCOPES)
     service = build('calendar', 'v3', credentials=credentials)
-    for match in matches:
-        match_info = get_match_info(match)
-        match_start_time = get_match_start_time(match_info)
-        match_end_time = get_match_end_time(match_info)
-        game_mode = match_info['info']['gameMode']
+    match_start_times = get_start_time_from_matches(matches)
+    match_end_times = get_end_time_from_matches(matches)
+    match_start_concat, match_end_concat = concat_match_times(match_start_times, match_end_times)
+    for i in len(match_start_concat):
+        duration = (match_end_concat[i] - match_start_concat[i]).seconds / 60
         body = {
-            'summary': f'LoL: {game_mode}',
+            'summary': f'LoL: {duration}min',
             'start': {
-                'dateTime': match_start_time.isoformat(),
+                'dateTime': match_start_concat.isoformat(),
                 'timeZone': 'Japan'
             },
             'end': {
-                'dateTime': match_end_time.isoformat(),
+                'dateTime': match_end_concat.isoformat(),
                 'timeZone': 'Japan'
             },
         }
