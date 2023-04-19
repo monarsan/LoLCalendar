@@ -40,7 +40,9 @@ def get_match_list(puuid, unix_time):
     r = requests.get(url, headers=headers, params=query_params)
     print('get_match_list====================')
     print(r.json())
-    return r.json()
+    l = r.json()
+    l.reverse()
+    return l
 
 
 def get_match_info(match_id):
@@ -103,14 +105,16 @@ def get_last_record_time():
 def get_start_time_from_matches(matches):
     start_time = []
     for match in matches:
-        start_time.append(get_match_start_time(match))
+        match_info = get_match_info(match)
+        start_time.append(get_match_start_time(match_info))
     return start_time
 
 
 def get_end_time_from_matches(matches):
     end_time = []
     for match in matches:
-        end_time.append(get_match_end_time(match))
+        match_info = get_match_info(match)
+        end_time.append(get_match_end_time(match_info))
     return end_time
 
 
@@ -135,16 +139,19 @@ def get_match_list_not_recorded(tokyo_time):
     match_start_times = get_start_time_from_matches(matches)
     match_end_times = get_end_time_from_matches(matches)
     match_start_concat, match_end_concat = concat_match_times(match_start_times, match_end_times)
-    for i in len(match_start_concat):
+    print(match_start_concat)
+    print(match_end_concat)
+    for i in range(len(match_start_concat)):
         duration = (match_end_concat[i] - match_start_concat[i]).seconds / 60
+        duration = int(duration)
         body = {
             'summary': f'LoL: {duration}min',
             'start': {
-                'dateTime': match_start_concat.isoformat(),
+                'dateTime': match_start_concat[i].isoformat(),
                 'timeZone': 'Japan'
             },
             'end': {
-                'dateTime': match_end_concat.isoformat(),
+                'dateTime': match_end_concat[i].isoformat(),
                 'timeZone': 'Japan'
             },
         }
